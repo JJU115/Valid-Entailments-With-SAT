@@ -3,7 +3,7 @@ CSC 322 - Spring 2019 - Project 1
 Finding logical entailments using SAT
 
 Date of creation: Jan 26, 2019
-Date of last modification: Jan 28, 2019
+Date of last modification: Jan 29, 2019
 
 Last modified by: Justin Underhay
 
