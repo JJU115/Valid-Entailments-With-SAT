@@ -3,9 +3,9 @@ CSC 322 - Spring 2019 - Project 1
 Finding logical entailments using SAT
 
 Date of creation: Jan 26, 2019
-Date of last modification: Feb 3, 2019
+Date of last modification: Feb 6, 2019
 
-Last modified by: Justin Underhay
+Last modified by: Rylan Boothman
 
 Notes:
     - Entering boolean formula on command line causes them to be interpreted as bash commands
@@ -17,11 +17,14 @@ import re
 import os
 import subprocess
 import math
+import tempfile
+import shutil
 
-
+#Token classes
+token_dict = {'~':-1, '&':-2, 'v':-3,
+              '->':-4, '(':-5, ')':-6}
 
 tokens2 = []
-var_counter = -1
 
 class AST_node:
     'Nodes that form the Abstract Syntax Tree'
@@ -41,10 +44,19 @@ class AST_node:
         self.rchild = child
 
 
+def get_next_var(variables, subf_counter):
+    if subf_counter % 2 == 0:
+        msg = "subf_counter must be odd, was {}".format(subf_counter)
+        raise ValueError(msg)
+    subf_counter += 2
+    while subf_counter in variables:
+        subf_counter += 2
+    return subf_counter
 
-def parse_sentence(tokens):
+
+def parse_sentence(tokens, variables, subf_counter):
     tokens2 = tokens
-    sent = parse_disjunction(tokens)
+    sent = parse_disjunction(tokens, variables, subf_counter)
 
     if not tokens2:
         return sent
@@ -53,69 +65,59 @@ def parse_sentence(tokens):
         return sent
 
     del tokens[0]
-    global var_counter
-    var_counter += 2
-    head = AST_node(-4, var_counter, sent, parse_disjunction(tokens))
+    var = get_next_var(variables, subf_counter)
+    head = AST_node(-4, var, sent, parse_disjunction(tokens, variables, var))
     return head
 
 
 
-def parse_disjunction(tokens):
-    disjunc = parse_conjunction(tokens)
+def parse_disjunction(tokens, variables, subf_counter):
+    disjunc = parse_conjunction(tokens, variables, subf_counter)
 
     if tokens:
         while tokens and tokens[0] == -3:
             del tokens[0]
-            global var_counter
-            var_counter += 2
-            next_orop = AST_node(-3, var_counter, disjunc, parse_conjunction(tokens))
+            var = get_next_var(variables, subf_counter)
+            next_orop = AST_node(-3, var, disjunc, parse_conjunction(tokens, variables, var))
             disjunc = next_orop
 
     return disjunc
 
 
-def parse_conjunction(tokens):
-    literal = parse_literal(tokens)
+def parse_conjunction(tokens, variables, subf_counter):
+    literal = parse_literal(tokens, variables, subf_counter)
 
     if tokens:
         while tokens and tokens[0] == -2:
             del tokens[0]
-            global var_counter
-            var_counter += 2
-            next_andop = AST_node(-2, var_counter, literal, parse_literal(tokens))
+            var = get_next_var(variables, subf_counter)
+            next_andop = AST_node(-2, var, literal, parse_literal(tokens, variables, var))
             literal = next_andop
 
     return literal
 
 
-def parse_literal(tokens):
+def parse_literal(tokens, variables, subf_counter):
 
     if tokens[0] == -1:
         del tokens[0]
         temp = tokens[0]
         del tokens[0]
-        global var_counter
-        var_counter += 2
-        return AST_node(-1, var_counter, parse_atom(tokens, temp), None)
+        var = get_next_var(variables, subf_counter)
+        return AST_node(-1, var, parse_atom(tokens, temp, variables, var), None)
     else:
         temp = tokens[0]
         del tokens[0]
-        return parse_atom(tokens, temp)
+        return parse_atom(tokens, temp, variables, subf_counter)
 
 
-def parse_atom(tokens, first, neg=False):
+def parse_atom(tokens, first, variables, subf_counter):
     if first > 0:
         return AST_node(first, first * 2, None, None)
     else:
-        sent = parse_sentence(tokens)
+        sent = parse_sentence(tokens, variables, subf_counter)
         del tokens[0]
         return sent
-
-
-#Token classes
-token_dict = {'~':-1, '&':-2, 'v':-3,
-              '->':-4, '(':-5, ')':-6}
-
 
 def get_clauses(connective, A, LHS, RHS):
     """
@@ -147,7 +149,7 @@ def get_clauses(connective, A, LHS, RHS):
 def convert_to_cnf(ast, output=None):
     """
     Given the root of an AST return its formula in CNF
-    """ 
+    """
 
     if output is None: output = [[-ast.var]]
     if (ast.lchild or ast.rchild):
@@ -158,65 +160,86 @@ def convert_to_cnf(ast, output=None):
             convert_to_cnf(ast.rchild, output)
         else:
             clauses = get_clauses(ast.op, ast.var, ast.lchild.var, None)
-            output.extend(clauses) 
+            output.extend(clauses)
     return output
 
 
-#Acquire command line input
-boolean_formula = sys.argv[1:]
-tokenized_formula = []
+def convert_to_DIMACS(cnf):
+    max_value = 0
+    for f in cnf:
+        curr_max = max([abs(x) for x in f])
+        if curr_max > max_value:
+            max_value = curr_max
+        f.append(0)
+    cnf = [["p", "cnf", max_value, len(cnf)]] + cnf
+    return "\n".join([" ".join([str(x) for x in y]) for y in cnf])
 
-#Tokenize the boolean formula 
-variable = re.compile('A([1-9][0-9]*)')
 
-#Tokenize all variables
-for v in boolean_formula:
-    match = variable.search(v)
-    if match:
-        for p in re.findall('~|[(]', v):
-            tokenized_formula.append(token_dict[p])
+def minisat(dimacs, return_assignment=False):
+    temp_dir = tempfile.mkdtemp()
+    input_file = temp_dir + '/input.txt'
+    output_file = temp_dir + '/output.txt'
+    with open(input_file, 'w') as f:
+        f.write(dimacs)
+    subprocess.call(["minisat", input_file, output_file],
+                    stdout=subprocess.PIPE)
+    with open(output_file, 'r') as f:
+        sat = f.readline().strip()
+        if sat == "UNSAT":
+            return "VALID"
+        elif sat == "SAT":
+            if not return_assignment:
+                return "NOT VALID"
+            else:
+                assignment = f.readline().strip()
+                assignment = [int(x) for x in assignment.split(" ")
+                              if int(x) % 2 == 0 and abs(int(x)) > 0]
+                assignment = ["A" + str(abs(x)/2) + " = F" if x < 0 else
+                              "A" + str(abs(x)/2) + " = T" for x in assignment]
+                return "NOT VALID: {}".format(", ".join(assignment))
+    shutil.rmtree(temp_dir)
 
-        tokenized_formula.append(int(match.group(1)))
 
-        for p in re.findall('[)]', v):
-            tokenized_formula.append(token_dict[p])
-    else:
-        if v in token_dict:
-            tokenized_formula.append(token_dict[v])
+def tokenize(boolean_formula):
+    tokenized_formula = []
+    #Tokenize the boolean formula 
+    variable = re.compile('A([1-9][0-9]*)')
+
+    #Tokenize all variables
+    for v in boolean_formula:
+        match = variable.search(v)
+        if match:
+            for p in re.findall('~|[(]', v):
+                tokenized_formula.append(token_dict[p])
+
+            tokenized_formula.append(int(match.group(1)))
+
+            for p in re.findall('[)]', v):
+                tokenized_formula.append(token_dict[p])
         else:
-            print("Boolean formula misformed, quitting...")
-            os._exit(-1)
-
-#Parse the tokenized formula and convert to CNF
-AST_head = parse_sentence(tokenized_formula)
-print(AST_head.op)
-
-#Alter tree structure slightly
-
-cnf = convert_to_cnf(AST_head)
-print(cnf)
-
-unique_vars = 0
-l = []
-
-for i in cnf:
-    for j in i:
-        if not math.fabs(j) in l:
-            l.append(math.fabs(j))
-            unique_vars += 1
+            if v in token_dict:
+                tokenized_formula.append(token_dict[v])
+            else:
+                print("Boolean formula misformed, quitting...")
+                os._exit(-1)
+    return tokenized_formula
 
 
-#Write to file and input to minisat
-minisat_input = open("minisat_input.txt", "w")
+def vcheck1(return_assignment=False):
+    #Acquire command line input
+    boolean_formula = sys.argv[1:]
+    tokenized_formula = tokenize(boolean_formula)
 
-minisat_input.write("p cnf " + str(unique_vars) + " " + str(len(cnf)) + "\n")
+    #Parse the tokenized formula and convert to CNF
+    variables = [2 * x for x in tokenized_formula if x > 0]
+    AST_head = parse_sentence(tokenized_formula, variables, -1)
+    cnf = convert_to_cnf(AST_head)
+    dimacs = convert_to_DIMACS(cnf)
+    return minisat(dimacs, return_assignment)
 
-for clause in cnf:
-    for var in clause:
-        minisat_input.write(str(var) + " ")
-    minisat_input.write("0\n")
 
+def vcheck2():
+    return vcheck1(True)
 
-os.system("minisat minisat_input.txt")
-
-minisat_input.close()        
+output = vcheck2()
+print(output)
