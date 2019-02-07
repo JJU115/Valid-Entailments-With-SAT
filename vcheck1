@@ -1,0 +1,2 @@
+echo $*
+python translateCNF-2.py 1 $*

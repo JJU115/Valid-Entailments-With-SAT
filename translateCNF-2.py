@@ -225,9 +225,7 @@ def tokenize(boolean_formula):
     return tokenized_formula
 
 
-def vcheck1(return_assignment=False):
-    #Acquire command line input
-    boolean_formula = sys.argv[1:]
+def vcheck(boolean_formula, return_assignment=False):
     tokenized_formula = tokenize(boolean_formula)
 
     #Parse the tokenized formula and convert to CNF
@@ -238,8 +236,17 @@ def vcheck1(return_assignment=False):
     return minisat(dimacs, return_assignment)
 
 
-def vcheck2():
-    return vcheck1(True)
 
-output = vcheck2()
-print(output)
+if __name__ == '__main__':
+    #Acquire command line input
+    task_num = int(sys.argv[1])
+    boolean_formula = sys.argv[2:]
+    if task_num == 1:
+        output = vcheck(boolean_formula, False)
+    elif task_num == 2:
+        output = vcheck(boolean_formula, True)
+    else:
+        output = "Error invalid task number"
+    print(output)
+
+
