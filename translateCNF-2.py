@@ -3,7 +3,7 @@ CSC 322 - Spring 2019 - Project 1
 Finding logical entailments using SAT
 
 Date of creation: Jan 26, 2019
-Date of last modification: Feb 6, 2019
+Date of last modification: Feb 7, 2019
 
 Last modified by: Rylan Boothman
 
@@ -11,6 +11,7 @@ Notes:
     - Entering boolean formula on command line causes them to be interpreted as bash commands
       unless enclosed in double quotes: -">" and "&" - Only a problem for implication and AND operators
 '''
+
 
 import sys
 import re
@@ -20,11 +21,13 @@ import math
 import tempfile
 import shutil
 
+
 #Token classes
 token_dict = {'~':-1, '&':-2, 'v':-3,
               '->':-4, '(':-5, ')':-6}
 
 tokens2 = []
+
 
 class AST_node:
     'Nodes that form the Abstract Syntax Tree'
@@ -45,6 +48,10 @@ class AST_node:
 
 
 def get_next_var(variables, subf_counter):
+    """
+    Keeps track of variable numbers given to subformulae, ensuring that they
+    are all odd and not in variables
+    """
     if subf_counter % 2 == 0:
         msg = "subf_counter must be odd, was {}".format(subf_counter)
         raise ValueError(msg)
@@ -68,7 +75,6 @@ def parse_sentence(tokens, variables, subf_counter):
     var = get_next_var(variables, subf_counter)
     head = AST_node(-4, var, sent, parse_disjunction(tokens, variables, var))
     return head
-
 
 
 def parse_disjunction(tokens, variables, subf_counter):
@@ -119,6 +125,7 @@ def parse_atom(tokens, first, variables, subf_counter):
         del tokens[0]
         return sent
 
+
 def get_clauses(connective, A, LHS, RHS):
     """
     Converts formulae of the form "A = LHS connective RHS" to sets of
@@ -165,6 +172,10 @@ def convert_to_cnf(ast, output=None):
 
 
 def convert_to_DIMACS(cnf):
+    """
+    Given a list of lists of a boolean formula in CNF, convert to a string in
+    DIMACS format ready to be given to minisat
+    """
     max_value = 0
     for f in cnf:
         curr_max = max([abs(x) for x in f])
@@ -175,7 +186,14 @@ def convert_to_DIMACS(cnf):
     return "\n".join([" ".join([str(x) for x in y]) for y in cnf])
 
 
-def minisat(dimacs, return_assignment=False):
+def minisat(dimacs, return_assignment, variables):
+    """
+    Write dimacs string to temporary file, pass that file to minisat, record
+    minisat output in another temporary file, return VALID if minisat returns
+    UNSAT, return NOT VALID if minisat returns SAT, if return_assignment set to
+    True also return the variable assignment given by minisat when the formula
+    is SAT
+    """
     temp_dir = tempfile.mkdtemp()
     input_file = temp_dir + '/input.txt'
     output_file = temp_dir + '/output.txt'
@@ -194,6 +212,7 @@ def minisat(dimacs, return_assignment=False):
                 assignment = f.readline().strip()
                 assignment = [int(x) for x in assignment.split(" ")
                               if int(x) % 2 == 0 and abs(int(x)) > 0]
+                assignment = [x for x in assignment if abs(x/2) in variables]
                 assignment = ["A" + str(abs(x)/2) + " = F" if x < 0 else
                               "A" + str(abs(x)/2) + " = T" for x in assignment]
                 output = "NOT VALID: {}".format(", ".join(assignment))
@@ -232,12 +251,12 @@ def vcheck(boolean_formula, return_assignment=False):
     tokenized_formula = tokenize(boolean_formula)
 
     #Parse the tokenized formula and convert to CNF
-    variables = [2 * x for x in tokenized_formula if x > 0]
-    AST_head = parse_sentence(tokenized_formula, variables, -1)
+    variables = [x for x in tokenized_formula if x > 0]
+    doubled_vars = [2 * x for x in tokenized_formula]
+    AST_head = parse_sentence(tokenized_formula, doubled_vars, -1)
     cnf = convert_to_cnf(AST_head)
     dimacs = convert_to_DIMACS(cnf)
-    return minisat(dimacs, return_assignment)
-
+    return minisat(dimacs, return_assignment, variables)
 
 
 if __name__ == '__main__':
@@ -251,5 +270,4 @@ if __name__ == '__main__':
     else:
         output = "Error invalid task number"
     print(output)
-
 
