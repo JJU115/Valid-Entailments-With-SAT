@@ -186,18 +186,21 @@ def minisat(dimacs, return_assignment=False):
     with open(output_file, 'r') as f:
         sat = f.readline().strip()
         if sat == "UNSAT":
-            return "VALID"
+            output = "VALID"
         elif sat == "SAT":
             if not return_assignment:
-                return "NOT VALID"
+                output = "NOT VALID"
             else:
                 assignment = f.readline().strip()
                 assignment = [int(x) for x in assignment.split(" ")
                               if int(x) % 2 == 0 and abs(int(x)) > 0]
                 assignment = ["A" + str(abs(x)/2) + " = F" if x < 0 else
                               "A" + str(abs(x)/2) + " = T" for x in assignment]
-                return "NOT VALID: {}".format(", ".join(assignment))
+                output = "NOT VALID: {}".format(", ".join(assignment))
+        else:
+            output = "Error minisat did not return SAT or UNSAT"
     shutil.rmtree(temp_dir)
+    return output
 
 
 def tokenize(boolean_formula):
