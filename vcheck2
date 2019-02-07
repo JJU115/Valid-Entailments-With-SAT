@@ -1,1 +1,2 @@
-python translateCNF-2.py 2 $*
+read line
+python translateCNF-2.py 2 $line

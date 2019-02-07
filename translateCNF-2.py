@@ -7,9 +7,6 @@ Date of last modification: Feb 7, 2019
 
 Last modified by: Rylan Boothman
 
-Notes:
-    - Entering boolean formula on command line causes them to be interpreted as bash commands
-      unless enclosed in double quotes: -">" and "&" - Only a problem for implication and AND operators
 '''
 
 
