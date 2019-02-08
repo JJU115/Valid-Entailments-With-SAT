@@ -175,7 +175,6 @@ token_dict = {'~':-1, '&':-2, 'v':-3,
 
 #Acquire command line input
 boolean_formulas = split_formulas(input("Enter comma separated boolean expression(s) >>>").split())
-print(boolean_formulas)
 tokenized_formula = []
 tokenized_formulas = []
 
@@ -206,8 +205,6 @@ for bf in boolean_formulas:
 
 
 variables = []
-
-print(tokenized_formulas)
 
 high_var = 0
 
