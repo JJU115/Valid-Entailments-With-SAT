@@ -1,2 +1,1 @@
-read line
-python translateCNF-2.py 1 $line
+python3 translateCNF-2.py 1
