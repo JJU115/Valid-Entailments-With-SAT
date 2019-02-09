@@ -279,7 +279,7 @@ def vcheck_3(boolean_formulas):
     else:
         vars, var = get_next_var(vars, var)
         conj = AST_node(-2, var, cnfs[0], cnfs[1])
-        for p in range(2, len(cnfs)-2):
+        for p in range(2, len(cnfs)-1):
             vars, var = get_next_var(vars, var)
             next_conj = AST_node(-2, var, conj, cnfs[p])
             conj = next_conj
