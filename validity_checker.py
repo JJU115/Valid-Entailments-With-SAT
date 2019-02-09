@@ -266,23 +266,24 @@ def vcheck_3(boolean_formulas):
 
     #Parse the tokenized formula and convert to CNF
     cnfs = []
+    vars, var = get_next_var(doubled_vars, -1)
     for f in tokenized_formulas:
-        var = get_next_var(doubled_vars, -1)
-        cnfs.append(parse_sentence(f, doubled_vars, var))
+        cnfs.append(parse_sentence(f, vars, var))
+        vars, var = get_next_var(vars, var)
 
     if len(cnfs) == 1:
         cnf = convert_to_cnf(cnfs[0])
     elif len(cnfs) == 2:
-        var = get_next_var(doubled_vars, var)
+        vars, var = get_next_var(vars, var)
         cnf = convert_to_cnf(AST_node(-4, var, cnfs[0], cnfs[1]))
     else:
-        var = get_next_var(doubled_vars, var)
+        vars, var = get_next_var(vars, var)
         conj = AST_node(-2, var, cnfs[0], cnfs[1])
         for p in range(2, len(cnfs)-2):
-            var = get_next_var(doubled_vars, var)
+            vars, var = get_next_var(vars, var)
             next_conj = AST_node(-2, var, conj, cnfs[p])
             conj = next_conj
-        var = get_next_var(doubled_vars, var)
+        vars, var = get_next_var(vars, var)
         cnf = convert_to_cnf(AST_node(-4, var, conj, cnfs[len(cnfs)-1]))
 
     dimacs = convert_to_DIMACS(cnf)
