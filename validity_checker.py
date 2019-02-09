@@ -23,9 +23,6 @@ import shutil
 token_dict = {'~':-1, '&':-2, 'v':-3,
               '->':-4, '(':-5, ')':-6}
 
-tokens2 = []
-
-
 class AST_node:
     'Nodes that form the Abstract Syntax Tree'
 
@@ -53,7 +50,8 @@ def get_next_var(variables, subf_counter):
     subf_counter += 2
     while subf_counter in variables:
         subf_counter += 2
-    return subf_counter
+    variables.append(subf_counter)
+    return variables, subf_counter
 
 
 def parse_sentence(tokens, variables, subf_counter):
@@ -67,8 +65,8 @@ def parse_sentence(tokens, variables, subf_counter):
         return sent
 
     del tokens[0]
-    var = get_next_var(variables, subf_counter)
-    head = AST_node(-4, var, sent, parse_disjunction(tokens, variables, var))
+    vars, var = get_next_var(variables, subf_counter)
+    head = AST_node(-4, var, sent, parse_disjunction(tokens, vars, var))
     return head
 
 
@@ -78,8 +76,8 @@ def parse_disjunction(tokens, variables, subf_counter):
     if tokens:
         while tokens and tokens[0] == -3:
             del tokens[0]
-            var = get_next_var(variables, subf_counter)
-            next_orop = AST_node(-3, var, disjunc, parse_conjunction(tokens, variables, var))
+            vars, var = get_next_var(variables, subf_counter)
+            next_orop = AST_node(-3, var, disjunc, parse_conjunction(tokens, vars, var))
             disjunc = next_orop
 
     return disjunc
@@ -91,32 +89,32 @@ def parse_conjunction(tokens, variables, subf_counter):
     if tokens:
         while tokens and tokens[0] == -2:
             del tokens[0]
-            var = get_next_var(variables, subf_counter)
-            next_andop = AST_node(-2, var, literal, parse_literal(tokens, variables, var))
+            vars, var = get_next_var(variables, subf_counter)
+            next_andop = AST_node(-2, var, literal, parse_literal(tokens, vars, var))
             literal = next_andop
 
     return literal
 
 
 def parse_literal(tokens, variables, subf_counter):
-
+    vars, var = get_next_var(variables, subf_counter)
     if tokens[0] == -1:
         del tokens[0]
         temp = tokens[0]
         del tokens[0]
-        var = get_next_var(variables, subf_counter)
-        return AST_node(-1, var, parse_atom(tokens, temp, variables, var), None)
+        return AST_node(-1, var, parse_atom(tokens, temp, vars, var), None)
     else:
         temp = tokens[0]
         del tokens[0]
-        return parse_atom(tokens, temp, variables, subf_counter)
+        return parse_atom(tokens, temp, variables, var)
 
 
 def parse_atom(tokens, first, variables, subf_counter):
     if first > 0:
         return AST_node(first, first * 2, None, None)
     else:
-        sent = parse_sentence(tokens, variables, subf_counter)
+        vars, var = get_next_var(variables, subf_counter)
+        sent = parse_sentence(tokens, vars, var)
         del tokens[0]
         return sent
 
