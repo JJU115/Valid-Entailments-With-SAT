@@ -66,7 +66,7 @@ def parse_sentence(tokens, variables, subf_counter):
 
     del tokens[0]
     vars, var = get_next_var(variables, subf_counter)
-    head = AST_node(-4, var, sent, parse_disjunction(tokens, vars, var))
+    head = AST_node(-4, var, sent, parse_sentence(tokens, vars, var))
     return head
 
 
