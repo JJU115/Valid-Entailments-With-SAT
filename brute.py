@@ -117,7 +117,7 @@ token_dict = {'~':-1, '&':-2, 'v':-3,
 
 
 #Acquire command line input
-boolean_formula = ['~', 'A1', 'v', 'A1', 'v', '~', 'A2', 'v', 'A2', 'v', '~', 'A3', 'v', 'A3', 'v', '~', 'A4', 'v', 'A4', 'v', '~', 'A5', 'v', 'A5', 'v', '~', 'A6', 'v', 'A6', 'v', '~', 'A7', 'v', 'A7', 'v', '~', 'A8', 'v', 'A8', 'v', '~', 'A9', 'v', 'A9', '&', '(', '~', 'A10', 'v', 'A10', ')']#sys.argv[1:]
+boolean_formula = sys.argv[1:]
 tokenized_formula = [] #look here for num_var
 
 #Tokenize the boolean formula 
