@@ -44,7 +44,7 @@ if __name__ == "__main__":
     validity = brute_force(boolean_formula)
     end = time.time()
     start2 = time.time()
-    validity2 = vcheck_1_2(boolean_formula, True)
+    validity2 = vcheck_1_2(boolean_formula, False)
     end2 = time.time()
     print("Brute Force returned: {} in {}s".format(validity, end - start))
     print("CNF method returned: {} in {}s".format(validity2, end2 - start2))
